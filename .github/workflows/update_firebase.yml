@@ -15,44 +15,44 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Firebase Admin
-        run: npm install firebase-admin
-
       - name: Update Versioning Document
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
+          npm install firebase-admin
           node -e "
           const admin = require('firebase-admin');
-          const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-          
-          admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount)
-          });
-          
-          const db = admin.firestore();
-          const release = ${{ toJson(github.event.release) }};
-          const apkAsset = release.assets.find(a => a.name.endsWith('.apk'));
-          
-          if (!apkAsset) {
-            console.log('No APK found in release');
-            process.exit(0);
-          }
+          try {
+            const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            admin.initializeApp({
+              credential: admin.credential.cert(serviceAccount)
+            });
+            const db = admin.firestore();
+            const release = ${{ toJson(github.event.release) }};
+            const apkAsset = release.assets.find(a => a.name.endsWith('.apk'));
+            
+            if (!apkAsset) {
+              console.log('No APK found in release');
+              process.exit(0);
+            }
 
-          // Extracting build number from tag (e.g. v1.0.0+2 -> 2)
-          const tag = release.tag_name;
-          const buildNumber = tag.includes('+') ? tag.split('+')[1] : '1';
-          const version = tag.split('+')[0].replace('v', '');
+            const tag = release.tag_name;
+            const buildNumber = tag.includes('+') ? tag.split('+')[1] : '1';
+            const version = tag.split('+')[0].replace('v', '');
 
-          db.collection('app_config').doc('versioning').set({
-            latest_build_number: buildNumber,
-            latest_version: version,
-            download_url: apkAsset.browser_download_url
-          }, { merge: true }).then(() => {
-            console.log('Successfully updated Firestore!');
-            process.exit(0);
-          }).catch(err => {
-            console.error('Error updating Firestore:', err);
+            db.collection('app_config').doc('versioning').set({
+              latest_build_number: buildNumber,
+              latest_version: version,
+              download_url: apkAsset.browser_download_url
+            }, { merge: true }).then(() => {
+              console.log('Successfully updated Firestore!');
+              process.exit(0);
+            }).catch(err => {
+              console.error('Firestore Error:', err.message);
+              process.exit(1);
+            });
+          } catch (e) {
+            console.error('Configuration Error:', e.message);
             process.exit(1);
-          });
+          }
           "
