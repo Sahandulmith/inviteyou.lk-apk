@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "445590917284",
+    "project_id": "wedding-dashboard-169f8",
+    "storage_bucket": "wedding-dashboard-169f8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:445590917284:android:5dee2227aefc5aa5775631",
+        "android_client_info": {
+          "package_name": "com.example.wedding_dashboard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJOcPM230-FIwIJyvdVbOMD3ukSKenDZ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
