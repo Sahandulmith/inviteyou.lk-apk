@@ -1,0 +1,20 @@
+name: Update Firestore on Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-firestore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Firebase Document
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const release = context.payload.release;
+            const apkAsset = release.assets.find(a => a.name.endsWith('.apk'));
+            const downloadUrl = apkAsset.browser_download_url;
+            const tag = release.tag_name; // e.g., v1.0.2
+            
+            // Here we would call a small script to update Firestore
+            // using the Firebase Admin SDK
