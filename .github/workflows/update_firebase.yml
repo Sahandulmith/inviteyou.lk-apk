@@ -18,17 +18,20 @@ jobs:
       - name: Update Versioning Document
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          RELEASE_DATA: ${{ toJson(github.event.release) }}
         run: |
           npm install firebase-admin
           node -e "
           const admin = require('firebase-admin');
           try {
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+            const release = JSON.parse(process.env.RELEASE_DATA);
+            
             admin.initializeApp({
               credential: admin.credential.cert(serviceAccount)
             });
+            
             const db = admin.firestore();
-            const release = ${{ toJson(github.event.release) }};
             const apkAsset = release.assets.find(a => a.name.endsWith('.apk'));
             
             if (!apkAsset) {
