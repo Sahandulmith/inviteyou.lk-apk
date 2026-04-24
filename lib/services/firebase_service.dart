@@ -27,8 +27,16 @@ class FirebaseService {
   }
 
   Future<void> addGuest(Map<String, dynamic> data) async {
+    // Generate a 4-character unique short ID
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = DateTime.now().millisecondsSinceEpoch;
+    final shortId = String.fromCharCodes(
+      List.generate(4, (i) => chars.codeUnitAt((random >> (i * 4)) % chars.length)),
+    );
+
     await _db.collection('wedding_guests').add({
       ...data,
+      'shortId': shortId,
       'createdAt': DateTime.now().toIso8601String(),
       'invitationSent': false,
       'invitationStatus': 'pending',

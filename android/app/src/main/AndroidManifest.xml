@@ -8,6 +8,11 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- Wake lock for background notifications -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    
+    <!-- Permissions for In-App Updates -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:label="Wedding Invite Dashboard"
@@ -55,6 +60,9 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/notification_icon_color" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="push_channel" />
     </application>
 
     <queries>

@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'services/notification_service.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
@@ -23,24 +24,11 @@ void main() async {
   // Initialize notifications
   await NotificationService().initialize();
 
-  // Check for saved session
-  final prefs = await SharedPreferences.getInstance();
-  final String? userJson = prefs.getString('currentUser');
-  Map<String, dynamic>? initialUser;
-  if (userJson != null) {
-    try {
-      initialUser = jsonDecode(userJson);
-    } catch (e) {
-      debugPrint('Error decoding saved user: $e');
-    }
-  }
-
-  runApp(WeddingApp(initialUser: initialUser));
+  runApp(const WeddingApp());
 }
 
 class WeddingApp extends StatelessWidget {
-  final Map<String, dynamic>? initialUser;
-  const WeddingApp({super.key, this.initialUser});
+  const WeddingApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -48,9 +36,7 @@ class WeddingApp extends StatelessWidget {
       title: 'Kalana & Chanchala Wedding',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
-      home: initialUser != null 
-          ? DashboardScreen(currentUser: initialUser!) 
-          : const LoginScreen(),
+      home: const SplashScreen(),
     );
   }
 }

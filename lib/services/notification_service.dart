@@ -2,12 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import '../firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'firebase_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // If you're going to use other Firebase services in the background, such as Firestore,
-  // make sure you call `Firebase.initializeApp()` first.
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    debugPrint("Firebase already initialized or error: $e");
+  }
   debugPrint("Handling a background message: ${message.messageId}");
 }
 
@@ -72,9 +77,10 @@ class NotificationService {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'push_channel',
       'Push Notifications',
-      importance: Importance.high,
+      importance: Importance.max,
       priority: Priority.high,
       color: Color(0xFF9C7B6E),
+      styleInformation: BigTextStyleInformation(''),
     );
     const NotificationDetails details = NotificationDetails(android: androidDetails);
 

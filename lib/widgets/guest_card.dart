@@ -75,7 +75,7 @@ class GuestCard extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        guest.name.isNotEmpty ? guest.name[0].toUpperCase() : '?',
+                        guest.displayName.isNotEmpty ? guest.displayName[0].toUpperCase() : '?',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -91,7 +91,7 @@ class GuestCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          guest.name,
+                          guest.displayName,
                           style: Theme.of(context)
                               .textTheme
                               .titleMedium
@@ -331,9 +331,11 @@ class GuestCard extends StatelessWidget {
                 ),
               ),
             ),
-            Text(guest.name,
+            Text(guest.displayName,
                 style: Theme.of(context).textTheme.displayMedium),
             const SizedBox(height: 12),
+            if (guest.title.isNotEmpty)
+              _detailRow(context, '🎩 Title', guest.title),
             _detailRow(context, '📱 WhatsApp', guest.whatsapp),
             _detailRow(context, '👥 Side', guest.side),
             _detailRow(context, '📊 Status', guest.displayStatus),

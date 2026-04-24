@@ -1,6 +1,8 @@
 class GuestModel {
   final String id;
+  final String title;
   final String name;
+  final String? shortId;
   final String whatsapp;
   final int numberOfGuests;
   final String side;
@@ -19,7 +21,9 @@ class GuestModel {
 
   GuestModel({
     required this.id,
+    this.title = 'Mr',
     required this.name,
+    this.shortId,
     required this.whatsapp,
     required this.numberOfGuests,
     required this.side,
@@ -37,10 +41,22 @@ class GuestModel {
     this.addedByRole,
   });
 
+  // Returns the formatted display name based on title
+  String get displayName {
+    if (title.isEmpty) return name;
+    if (title == 'Mr & Family') return 'Mr $name & Family';
+    return '$title $name';
+  }
+
+  // Returns just the base name (for RSVP section)
+  String get baseName => name;
+
   factory GuestModel.fromFirestore(Map<String, dynamic> data, String id) {
     return GuestModel(
       id: id,
+      title: data['title'] ?? 'Mr',
       name: data['name'] ?? '',
+      shortId: data['shortId'],
       whatsapp: data['whatsapp'] ?? '',
       numberOfGuests: (data['numberOfGuests'] ?? 1) is int
           ? data['numberOfGuests'] ?? 1

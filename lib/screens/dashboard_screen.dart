@@ -54,15 +54,21 @@ class _DashboardScreenState extends State<DashboardScreen>
     _fadeAnim = CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut);
     _headerAnim.forward();
 
+    bool isFirstGuestsLoad = true;
     _guestsSub = _firebase.guestsStream().listen((guests) {
-      _detectNewRsvps(guests);
-      _detectNewGuestAdditions(guests);
-      setState(() {
-        _allGuests = guests;
-        _filteredGuests = _applyFilter(guests);
-        _loading = false;
-      });
+      if (!isFirstGuestsLoad) {
+        _detectNewRsvps(guests);
+        _detectNewGuestAdditions(guests);
+      }
+      if (mounted) {
+        setState(() {
+          _allGuests = guests;
+          _filteredGuests = _applyFilter(guests);
+          _loading = false;
+        });
+      }
       _prevGuests = List.from(guests);
+      isFirstGuestsLoad = false;
     });
 
     _tablesSub = _firebase.tablesStream().listen((tables) {
@@ -116,7 +122,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       if (wasNotRsvpd && isNowRsvpd) {
         _notifications.showRsvpNotification(
-          guestName: guest.name,
+          guestName: guest.displayName,
           status: guest.status,
           message: guest.rsvpMessage,
         );
@@ -137,7 +143,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         // Only notify if someone else added it
         if (guest.addedByEmail != widget.currentUser['email']) {
           _notifications.showNewGuestNotification(
-            guestName: guest.name,
+            guestName: guest.displayName,
             side: guest.side,
             addedByEmail: guest.addedByEmail ?? 'User',
             addedByRole: guest.addedByRole ?? 'Admin',
@@ -720,6 +726,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final waCtrl = TextEditingController();
     final guestsCtrl = TextEditingController(text: '1');
     String side = 'Groom';
+    String title = 'Mr';
 
     showModalBottomSheet(
       context: context,
@@ -751,6 +758,19 @@ class _DashboardScreenState extends State<DashboardScreen>
               Text('Add New Guest',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
+              // Title Dropdown
+              DropdownButtonFormField<String>(
+                value: title,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+                items: ['Mr', 'Ms', 'Miss', 'Mr & Ms', 'Mr & Family']
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
+                onChanged: (v) => setS(() => title = v!),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: nameCtrl,
                 decoration: const InputDecoration(
@@ -813,6 +833,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     String wa = waCtrl.text.trim().replaceAll(RegExp(r'\D'), '');
                     if (wa.startsWith('0')) wa = '94${wa.substring(1)}';
                     await _firebase.addGuest({
+                      'title': title,
                       'name': nameCtrl.text.trim(),
                       'whatsapp': wa,
                       'numberOfGuests':
@@ -827,7 +848,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                              '🎉 ${nameCtrl.text.trim()} added successfully!'),
+                              '🎉 $title ${nameCtrl.text.trim()} added successfully!'),
                           backgroundColor: AppTheme.attending,
                         ),
                       );
@@ -849,6 +870,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         TextEditingController(text: guest.numberOfGuests.toString());
     String side = guest.side;
     String status = guest.status;
+    String title = guest.title.isNotEmpty ? guest.title : 'Mr';
 
     showModalBottomSheet(
       context: context,
@@ -880,6 +902,19 @@ class _DashboardScreenState extends State<DashboardScreen>
               Text('Edit Guest',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
+              // Title Dropdown
+              DropdownButtonFormField<String>(
+                value: title,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+                items: ['Mr', 'Ms', 'Miss', 'Mr & Ms', 'Mr & Family']
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
+                onChanged: (v) => setS(() => title = v!),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: nameCtrl,
                 decoration: const InputDecoration(
@@ -943,6 +978,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     String wa = waCtrl.text.trim().replaceAll(RegExp(r'\D'), '');
                     if (wa.startsWith('0')) wa = '94${wa.substring(1)}';
                     await _firebase.updateGuest(guest.id, {
+                      'title': title,
                       'name': nameCtrl.text.trim(),
                       'whatsapp': wa,
                       'numberOfGuests':
@@ -996,8 +1032,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _sendWhatsApp(GuestModel guest) async {
-    final String link = "$_baseUrl/invitation?name=${Uri.encodeComponent(guest.name)}";
-    final String msg = "Dear ${guest.name}, you are cordially invited to the wedding of Kalana & Chanchala on June 11, 2026 at Hotel Sundream. Please RSVP via your personal invitation link: $link\n\nWith love 💍";
+    final String shortId = guest.shortId ?? '';
+    final String urlId = shortId.isNotEmpty ? '&id=$shortId' : '';
+    final String link = "${_baseUrl}invitation?name=${Uri.encodeComponent(guest.name)}$urlId";
+    final String msg =
+"Dear ${guest.displayName},\n\nYou're invited to the wedding of\n\n💍 Chanchala & Kalana 💍\n\nNumber of Guests: ${guest.numberOfGuests}\nSunday, July 12, 2026\n\n👇 View Invitation:\n$link";
     
     final Uri url = Uri.parse('https://wa.me/${guest.whatsapp}?text=${Uri.encodeComponent(msg)}');
     
@@ -1022,7 +1061,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _copyLink(GuestModel guest) {
-    final String link = "$_baseUrl/invitation?name=${Uri.encodeComponent(guest.name)}";
+    final String shortId = guest.shortId ?? '';
+    final String urlId = shortId.isNotEmpty ? '&id=$shortId' : '';
+    final String link = "${_baseUrl}invitation?name=${Uri.encodeComponent(guest.name)}$urlId";
     Clipboard.setData(ClipboardData(text: link));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1035,9 +1076,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _shareLink(GuestModel guest) {
-    final String link = "$_baseUrl/invitation?name=${Uri.encodeComponent(guest.name)}";
+    final String shortId = guest.shortId ?? '';
+    final String urlId = shortId.isNotEmpty ? '&id=$shortId' : '';
+    final String link = "${_baseUrl}invitation?name=${Uri.encodeComponent(guest.name)}$urlId";
     Share.share(
-      'Dear ${guest.name}, you are cordially invited to the wedding of Kalana & Chanchala. Please RSVP via this link: $link',
+      'Dear ${guest.displayName}, you are cordially invited to the wedding of Kalana & Chanchala. Please RSVP via this link: $link',
       subject: 'Wedding Invitation - Kalana & Chanchala',
     );
   }
