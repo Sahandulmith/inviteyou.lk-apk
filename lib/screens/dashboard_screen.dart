@@ -9,6 +9,8 @@ import '../services/notification_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../theme/app_theme.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/guest_card.dart';
@@ -97,6 +99,34 @@ class _DashboardScreenState extends State<DashboardScreen>
     _baseUrlSub = _firebase.baseUrlStream().listen((url) {
       if (mounted) setState(() => _baseUrl = url);
     });
+
+    // Ensure background service is running
+    _checkBackgroundService();
+  }
+
+  Future<void> _checkBackgroundService() async {
+    final service = FlutterBackgroundService();
+    bool isRunning = await service.isRunning();
+    if (!isRunning) {
+      debugPrint('Dashboard: Background service not running, starting...');
+      await service.startService();
+    }
+
+    // Check for battery optimization (Crucial for background persistence)
+    if (await Permission.ignoreBatteryOptimizations.isDenied) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Enable "Ignore Battery Optimization" to get real-time notifications even when the app is closed.'),
+            action: SnackBarAction(
+              label: 'Enable',
+              onPressed: () => openAppSettings(),
+            ),
+            duration: const Duration(seconds: 10),
+          ),
+        );
+      }
+    }
   }
 
   void _detectNewRsvps(List<GuestModel> newGuests) {

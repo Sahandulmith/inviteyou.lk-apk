@@ -21,7 +21,7 @@ class AppBackgroundService {
       notificationChannelId,
       'Wedding Sync Service',
       description: 'Maintains real-time wedding updates',
-      importance: Importance.low,
+      importance: Importance.high, // Increased importance
     );
 
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -48,6 +48,9 @@ class AppBackgroundService {
         onBackground: onIosBackground,
       ),
     );
+    
+    // Explicitly start the service
+    await service.startService();
   }
 
   @pragma('vm:entry-point')
@@ -59,14 +62,21 @@ class AppBackgroundService {
   static void onStart(ServiceInstance service) async {
     DartPluginRegistrant.ensureInitialized();
 
-    // Initialize Firebase and Notifications in the background process
+    if (service is AndroidServiceInstance) {
+      service.setAsForegroundService();
+    }
+
+    // Initialize Firebase in the background process
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
       
-      // CRITICAL: Must initialize notification service in the background isolate too
+      // Initialize notifications for the background isolate
       await NotificationService().initialize();
+      debugPrint('Background Service: Initialized successfully');
     } catch (e) {
       debugPrint('Background Init Error: $e');
     }
@@ -94,6 +104,7 @@ class AppBackgroundService {
         .collection('wedding_guests')
         .snapshots()
         .listen((snapshot) async {
+      debugPrint('Background Service: Received guest update');
       for (var change in snapshot.docChanges) {
         // We handle added (initial load or new guest) and modified (status change)
         if (change.type == DocumentChangeType.modified || change.type == DocumentChangeType.added) {
@@ -109,6 +120,7 @@ class AppBackgroundService {
           final String lastNotifiedKey = 'notified_rsvp_$docId';
           final String lastStatusKey = 'last_status_$docId';
           
+          await prefs.reload(); // Ensure we have latest data
           final String? lastStatus = prefs.getString(lastStatusKey);
           final String? lastNotifiedDate = prefs.getString(lastNotifiedKey);
 
@@ -118,6 +130,7 @@ class AppBackgroundService {
           // 3. Status has changed OR it's a new rsvpDate we haven't seen
           if (rsvpDate.isNotEmpty && status != 'Invited') {
             if (status != lastStatus || rsvpDate != lastNotifiedDate) {
+              debugPrint('Background Service: Showing RSVP notification for $guestName');
               await NotificationService().showRsvpNotification(
                 guestName: guestName,
                 status: status,
@@ -131,6 +144,8 @@ class AppBackgroundService {
           }
         }
       }
+    }, onError: (e) {
+      debugPrint('Background Service Firestore Error: $e');
     });
 
     // 2. Listen for new Approval Requests
@@ -149,7 +164,9 @@ class AppBackgroundService {
           final String docId = change.doc.id;
 
           final String lastNotifiedKey = 'notified_user_$docId';
+          await prefs.reload();
           if (!prefs.containsKey(lastNotifiedKey)) {
+            debugPrint('Background Service: Showing User Request notification for $email');
             await NotificationService().showNewUserRequestNotification(
               email: email,
               role: role,
@@ -161,12 +178,12 @@ class AppBackgroundService {
     });
 
     // Periodic Update (Optional)
-    Timer.periodic(const Duration(minutes: 15), (timer) async {
+    Timer.periodic(const Duration(minutes: 5), (timer) async {
       if (service is AndroidServiceInstance) {
         if (await service.isForegroundService()) {
           service.setForegroundNotificationInfo(
             title: "Wedding Dashboard Sync",
-            content: "Last sync: ${DateTime.now().hour}:${DateTime.now().minute}",
+            content: "Last sync: ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}",
           );
         }
       }
