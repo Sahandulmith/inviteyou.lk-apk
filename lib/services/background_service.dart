@@ -59,13 +59,16 @@ class AppBackgroundService {
   static void onStart(ServiceInstance service) async {
     DartPluginRegistrant.ensureInitialized();
 
-    // Initialize Firebase in the background process
+    // Initialize Firebase and Notifications in the background process
     try {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+      
+      // CRITICAL: Must initialize notification service in the background isolate too
+      await NotificationService().initialize();
     } catch (e) {
-      debugPrint('Background Firebase Init Error: $e');
+      debugPrint('Background Init Error: $e');
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -86,13 +89,14 @@ class AppBackgroundService {
 
     // --- Listen to Firestore for Real-time Notifications ---
     
-    // 1. Listen for new RSVPs
+    // 1. Listen for RSVPs (Both added and modified)
     FirebaseFirestore.instance
         .collection('wedding_guests')
         .snapshots()
         .listen((snapshot) async {
       for (var change in snapshot.docChanges) {
-        if (change.type == DocumentChangeType.modified) {
+        // We handle added (initial load or new guest) and modified (status change)
+        if (change.type == DocumentChangeType.modified || change.type == DocumentChangeType.added) {
           final data = change.doc.data();
           if (data == null) continue;
 
@@ -101,23 +105,29 @@ class AppBackgroundService {
           final String rsvpDate = data['rsvpDate'] ?? '';
           final String guestName = data['name'] ?? 'Guest';
 
-          // Check if this is a new RSVP update that we haven't notified about
+          // Check if this is an RSVP update we haven't notified about
           final String lastNotifiedKey = 'notified_rsvp_$docId';
           final String lastStatusKey = 'last_status_$docId';
           
           final String? lastStatus = prefs.getString(lastStatusKey);
+          final String? lastNotifiedDate = prefs.getString(lastNotifiedKey);
 
-          if (rsvpDate.isNotEmpty && status != 'Invited' && status != lastStatus) {
-            // Show RSVP notification
-            await NotificationService().showRsvpNotification(
-              guestName: guestName,
-              status: status,
-              message: data['rsvpMessage'],
-            );
-            
-            // Save last status to prevent repeat notifications
-            await prefs.setString(lastStatusKey, status);
-            await prefs.setString(lastNotifiedKey, rsvpDate);
+          // Notify if:
+          // 1. There is an RSVP date
+          // 2. Status is not 'Invited'
+          // 3. Status has changed OR it's a new rsvpDate we haven't seen
+          if (rsvpDate.isNotEmpty && status != 'Invited') {
+            if (status != lastStatus || rsvpDate != lastNotifiedDate) {
+              await NotificationService().showRsvpNotification(
+                guestName: guestName,
+                status: status,
+                message: data['rsvpMessage'],
+              );
+              
+              // Save state to prevent repeat notifications
+              await prefs.setString(lastStatusKey, status);
+              await prefs.setString(lastNotifiedKey, rsvpDate);
+            }
           }
         }
       }
