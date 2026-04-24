@@ -129,8 +129,12 @@ class _SplashScreenState extends State<SplashScreen> {
                 _progress = double.parse(event.value!) / 100;
                 break;
               case OtaStatus.INSTALLING:
-                _status = "Updating App... Please wait.";
+                _status = "Installing... The app will close now. Please reopen it after installation.";
                 _progress = 1.0;
+                // Give the user 2 seconds to read the message before the installer takes over
+                Future.delayed(const Duration(seconds: 2), () {
+                  // The installer will now close the app
+                });
                 break;
               case OtaStatus.ALREADY_RUNNING_ERROR:
                 _status = "Update already running";

@@ -10,10 +10,39 @@ import 'firebase_service.dart';
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    
+    // Show notification even if app is terminated
+    if (message.notification != null || message.data.isNotEmpty) {
+      final notification = message.notification;
+      final data = message.data;
+      
+      final FlutterLocalNotificationsPlugin localNotifications = FlutterLocalNotificationsPlugin();
+      
+      const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const InitializationSettings initSettings = InitializationSettings(android: androidSettings);
+      await localNotifications.initialize(initSettings);
+
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'push_channel',
+        'Push Notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        color: Color(0xFF9C7B6E),
+        styleInformation: BigTextStyleInformation(''),
+      );
+      const NotificationDetails details = NotificationDetails(android: androidDetails);
+
+      await localNotifications.show(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        notification?.title ?? data['title'] ?? 'Wedding Update',
+        notification?.body ?? data['body'] ?? 'New message received',
+        details,
+        payload: jsonEncode(data),
+      );
+    }
   } catch (e) {
-    debugPrint("Firebase already initialized or error: $e");
+    debugPrint("Error in background handler: $e");
   }
-  debugPrint("Handling a background message: ${message.messageId}");
 }
 
 class NotificationService {
@@ -36,7 +65,7 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    // Request permissions on Android 13+ and iOS
+    // Request permissions on Android 13+
     final androidPlugin =
         _localNotifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
@@ -67,13 +96,26 @@ class NotificationService {
     // Listen to messages while app is in FOREGROUND
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (message.notification != null) {
-        // Show as a local notification since we're in the foreground
-        _showForegroundFcm(message.notification!);
+        _showForegroundFcm(message.notification!, message.data);
+      } else if (message.data.isNotEmpty) {
+        // Handle data-only messages in foreground
+        _showDataFcm(message.data);
       }
+    });
+    
+    // Handle message if app was opened from a terminated state
+    RemoteMessage? initialMessage = await messaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleMessageTap(initialMessage.data);
+    }
+
+    // Handle message if app is in background but not terminated
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _handleMessageTap(message.data);
     });
   }
 
-  Future<void> _showForegroundFcm(RemoteNotification notification) async {
+  Future<void> _showForegroundFcm(RemoteNotification notification, Map<String, dynamic> data) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'push_channel',
       'Push Notifications',
@@ -89,12 +131,44 @@ class NotificationService {
       notification.title,
       notification.body,
       details,
+      payload: jsonEncode(data),
+    );
+  }
+
+  Future<void> _showDataFcm(Map<String, dynamic> data) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'push_channel',
+      'Push Notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+      color: Color(0xFF9C7B6E),
+      styleInformation: BigTextStyleInformation(''),
+    );
+    const NotificationDetails details = NotificationDetails(android: androidDetails);
+
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      data['title'] ?? 'Wedding Update',
+      data['body'] ?? 'New message received',
+      details,
+      payload: jsonEncode(data),
     );
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    // Handle notification tap - navigate to guests screen
-    debugPrint('Notification tapped: ${response.payload}');
+    if (response.payload != null) {
+      try {
+        final data = jsonDecode(response.payload!);
+        _handleMessageTap(data);
+      } catch (e) {
+        debugPrint('Error parsing notification payload: $e');
+      }
+    }
+  }
+
+  void _handleMessageTap(Map<String, dynamic> data) {
+    debugPrint('Notification tapped with data: $data');
+    // Navigation logic can be added here if needed
   }
 
   Future<void> showRsvpNotification({
@@ -132,7 +206,7 @@ class NotificationService {
       'New RSVP: $guestName',
       '$emoji $guestName $statusText',
       details,
-      payload: jsonEncode({'guestName': guestName, 'status': status}),
+      payload: jsonEncode({'guestName': guestName, 'status': status, 'type': 'rsvp'}),
     );
   }
 
@@ -166,7 +240,7 @@ class NotificationService {
   }) async {
     final String nameOnly = email.split('@')[0];
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'rsvp_channel', // Use the same channel to ensure high priority consistency
+      'rsvp_channel',
       'Wedding Notifications',
       channelDescription: 'Notifications for wedding events and admin requests',
       importance: Importance.max,
@@ -185,10 +259,11 @@ class NotificationService {
     final NotificationDetails details = NotificationDetails(android: androidDetails);
 
     await _localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000 + 1, // Unique ID
+      DateTime.now().millisecondsSinceEpoch ~/ 1000 + 1,
       'New Approval Request 💍',
       '$nameOnly wants access as $role',
       details,
+      payload: jsonEncode({'email': email, 'role': role, 'type': 'user_request'}),
     );
   }
 
@@ -223,6 +298,8 @@ class NotificationService {
       'New Guest Added 👤',
       '$guestName added to $side side',
       details,
+      payload: jsonEncode({'guestName': guestName, 'side': side, 'type': 'new_guest'}),
     );
   }
 }
+

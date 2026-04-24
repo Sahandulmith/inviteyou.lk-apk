@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'firebase_options.dart';
 import 'services/notification_service.dart';
+import 'services/background_service.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -23,6 +24,9 @@ void main() async {
   
   // Initialize notifications
   await NotificationService().initialize();
+
+  // Initialize background service
+  await AppBackgroundService.initialize();
 
   runApp(const WeddingApp());
 }
