@@ -69,12 +69,15 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="push_channel" />
 
-        <!-- Background Service -->
+        <!-- Background Service - Isolated in a separate process for maximum persistence -->
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"
             android:foregroundServiceType="dataSync"
+            android:process=":background_sync"
+            android:stopWithTask="false"
+            android:enabled="true"
             android:exported="true"
-            tools:replace="android:exported" />
+            tools:replace="android:exported,android:process" />
 
         <!-- FileProvider for OTA Updates -->
         <provider
