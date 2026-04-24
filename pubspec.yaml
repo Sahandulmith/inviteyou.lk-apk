@@ -2,7 +2,7 @@ name: wedding_app
 description: "Wedding Invite Dashboard - Flutter Android App"
 publish_to: 'none'
 
-version: 1.0.4+4
+version: 1.0.5+5
 
 environment:
   sdk: ^3.10.8
