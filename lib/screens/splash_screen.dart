@@ -43,21 +43,39 @@ class _SplashScreenState extends State<SplashScreen> {
           .get();
 
       if (doc.exists) {
-        int latestBuildNumber = int.parse(doc.data()?['latest_build_number'] ?? "0");
-        String downloadUrl = doc.data()?['download_url'] ?? "";
-        String latestVersion = doc.data()?['latest_version'] ?? "1.0.0";
+        final data = doc.data();
+        int latestBuildNumber = int.parse(data?['latest_build_number']?.toString() ?? "0");
+        String latestVersion = data?['latest_version']?.toString() ?? "1.0.0";
+        String downloadUrl = data?['download_url']?.toString() ?? "";
 
-        if (latestBuildNumber > currentBuildNumber) {
+        // Check if build number is higher OR if version string is different
+        // (Best practice is to always increment build number, but this is safer)
+        bool hasUpdate = latestBuildNumber > currentBuildNumber || 
+                        _isVersionNewer(latestVersion, currentVersion);
+
+        if (hasUpdate && downloadUrl.isNotEmpty) {
           _showUpdateDialog(latestVersion, downloadUrl);
           return;
         }
       }
-
-      // 3. No update or check failed, proceed to next screen
-      _proceedToApp();
     } catch (e) {
       debugPrint("Update check failed: $e");
-      _proceedToApp();
+    }
+    _proceedToApp();
+  }
+
+  bool _isVersionNewer(String latest, String current) {
+    try {
+      List<int> latestParts = latest.split('.').map((e) => int.parse(e.replaceAll(RegExp(r'[^0-9]'), ''))).toList();
+      List<int> currentParts = current.split('.').map((e) => int.parse(e.replaceAll(RegExp(r'[^0-9]'), ''))).toList();
+      
+      for (int i = 0; i < latestParts.length && i < currentParts.length; i++) {
+        if (latestParts[i] > currentParts[i]) return true;
+        if (latestParts[i] < currentParts[i]) return false;
+      }
+      return latestParts.length > currentParts.length;
+    } catch (e) {
+      return latest != current; // Fallback to simple inequality
     }
   }
 
