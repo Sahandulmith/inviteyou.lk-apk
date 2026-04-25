@@ -35,7 +35,7 @@ class AppTheme {
   static ThemeData _buildTheme(Brightness brightness) {
     final bool isDark = brightness == Brightness.dark;
     
-    final Color primaryColor = isDark ? const Color(0xFF1E293B) : rosePrimary;
+    final Color primaryColor = isDark ? gold : rosePrimary;
     final Color scaffoldBg = isDark ? const Color(0xFF0F172A) : ivory;
     final Color cardColor = isDark ? const Color(0xFF1E293B) : surface;
     final Color textColor = isDark ? Colors.white : textDark;
@@ -51,6 +51,8 @@ class AppTheme {
         secondary: gold,
         surface: cardColor,
         background: scaffoldBg,
+        onSurface: textColor,
+        onBackground: textColor,
       ),
       textTheme: GoogleFonts.playfairDisplayTextTheme(
         isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
@@ -69,7 +71,7 @@ class AppTheme {
             fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: primaryColor,
+        backgroundColor: isDark ? const Color(0xFF1E293B) : rosePrimary,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
@@ -120,7 +122,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: cardColor,
-        indicatorColor: primaryColor.withOpacity(0.1),
+        indicatorColor: primaryColor.withOpacity(0.15),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return IconThemeData(color: primaryColor);
@@ -137,8 +139,8 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: cardColor,
-        selectedItemColor: isDark ? gold : rosePrimary,
-        unselectedItemColor: isDark ? Colors.white38 : const Color(0xFFBDBDBD),
+        selectedItemColor: primaryColor,
+        unselectedItemColor: textSecondary,
         elevation: 8,
         type: BottomNavigationBarType.fixed,
       ),

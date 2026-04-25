@@ -8,6 +8,9 @@ import 'login_screen.dart';
 import 'package:provider/provider.dart';
 import '../theme/theme_provider.dart';
 
+import 'package:flutter_background_service/flutter_background_service.dart';
+import '../services/background_service.dart';
+
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> currentUser;
   const ProfileScreen({super.key, required this.currentUser});
@@ -88,6 +91,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           const SizedBox(height: 10),
           _buildUserInfoCard(),
+          const SizedBox(height: 24),
+          _buildSectionHeader('Notification Settings'),
+          const SizedBox(height: 12),
+          _buildBackgroundSyncToggle(),
           const SizedBox(height: 24),
           _buildSectionHeader('Display Settings'),
           const SizedBox(height: 12),
@@ -196,6 +203,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildBackgroundSyncToggle() {
+    return FutureBuilder<bool>(
+      future: FlutterBackgroundService().isRunning(),
+      builder: (context, snapshot) {
+        final bool isRunning = snapshot.data ?? false;
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: SwitchListTile(
+            secondary: Icon(
+              Icons.sync_rounded,
+              color: isRunning ? AppTheme.attending : AppTheme.textMid,
+            ),
+            title: const Text('Real-time Background Sync', style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(isRunning 
+              ? 'Receiving updates when app is closed' 
+              : 'Updates only when app is open'),
+            value: isRunning,
+            activeColor: AppTheme.attending,
+            onChanged: (val) async {
+              final service = FlutterBackgroundService();
+              if (val) {
+                await AppBackgroundService.initialize();
+                await service.startService();
+              } else {
+                service.invoke('stopService');
+              }
+              setState(() {}); // Refresh UI
+            },
+          ),
+        );
+      },
     );
   }
 

@@ -521,6 +521,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ──────────────────── STATS TAB ────────────────────
 
   Widget _buildStatsTab() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -539,7 +540,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 label: 'Total Guests',
                 value: '${stats['total']} invites',
                 subValue: '${stats['totalPeopleInvited']} people',
-                color: AppTheme.rosePrimary,
+                color: Theme.of(context).colorScheme.primary,
                 icon: Icons.people_rounded,
               ),
               StatCard(
@@ -565,7 +566,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 value: '${stats['groomSide']} invites',
                 subValue:
                     '${stats['groomPeopleConfirmed']}/${stats['groomPeopleInvited']} people',
-                color: AppTheme.roseDark,
+                color: isDark ? Colors.blueAccent : AppTheme.roseDark,
                 icon: Icons.man_rounded,
               ),
               StatCard(

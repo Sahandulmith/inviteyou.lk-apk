@@ -21,7 +21,7 @@ class AppBackgroundService {
       notificationChannelId,
       'Wedding Sync Service',
       description: 'Maintains real-time wedding updates',
-      importance: Importance.high, // Increased importance
+      importance: Importance.min, // 'min' hides the status bar icon but keeps service alive
     );
 
     final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -36,10 +36,10 @@ class AppBackgroundService {
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
         autoStart: true,
-        isForegroundMode: false, // This removes the persistent notification
+        isForegroundMode: true, // Required for real-time listeners when app is closed
         notificationChannelId: notificationChannelId,
-        initialNotificationTitle: 'Wedding Dashboard',
-        initialNotificationContent: 'Monitoring updates in background',
+        initialNotificationTitle: 'Wedding Dashboard Active',
+        initialNotificationContent: 'Syncing updates in background...',
         foregroundServiceNotificationId: notificationId,
       ),
       iosConfiguration: IosConfiguration(
@@ -63,7 +63,7 @@ class AppBackgroundService {
     DartPluginRegistrant.ensureInitialized();
 
     if (service is AndroidServiceInstance) {
-      // service.setAsForegroundService(); // Disabled to hide persistent notification
+      service.setAsForegroundService(); // Re-enabled to ensure background persistence
     }
 
     // Initialize Firebase in the background process
@@ -77,15 +77,13 @@ class AppBackgroundService {
       // Initialize notifications for the background isolate
       await NotificationService().initialize();
       
-      // Notify user that sync is starting (Optional: only if you want a temporary notification)
-      /* 
+      // Notify user that sync is starting
       if (service is AndroidServiceInstance) {
         service.setForegroundNotificationInfo(
-          title: "Wedding Dashboard Sync",
-          content: "Service started. Monitoring for updates...",
+          title: "Wedding Dashboard Active",
+          content: "Monitoring for new RSVPs & requests...",
         );
       }
-      */
       
       debugPrint('Background Service: Initialized successfully in separate process');
     } catch (e) {
