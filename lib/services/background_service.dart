@@ -36,10 +36,10 @@ class AppBackgroundService {
       androidConfiguration: AndroidConfiguration(
         onStart: onStart,
         autoStart: true,
-        isForegroundMode: true,
+        isForegroundMode: false, // This removes the persistent notification
         notificationChannelId: notificationChannelId,
-        initialNotificationTitle: 'Wedding Dashboard Active',
-        initialNotificationContent: 'Monitoring for new RSVPs...',
+        initialNotificationTitle: 'Wedding Dashboard',
+        initialNotificationContent: 'Monitoring updates in background',
         foregroundServiceNotificationId: notificationId,
       ),
       iosConfiguration: IosConfiguration(
@@ -63,7 +63,7 @@ class AppBackgroundService {
     DartPluginRegistrant.ensureInitialized();
 
     if (service is AndroidServiceInstance) {
-      service.setAsForegroundService();
+      // service.setAsForegroundService(); // Disabled to hide persistent notification
     }
 
     // Initialize Firebase in the background process
@@ -77,13 +77,15 @@ class AppBackgroundService {
       // Initialize notifications for the background isolate
       await NotificationService().initialize();
       
-      // Notify user that sync is starting
+      // Notify user that sync is starting (Optional: only if you want a temporary notification)
+      /* 
       if (service is AndroidServiceInstance) {
         service.setForegroundNotificationInfo(
           title: "Wedding Dashboard Sync",
           content: "Service started. Monitoring for updates...",
         );
       }
+      */
       
       debugPrint('Background Service: Initialized successfully in separate process');
     } catch (e) {
@@ -94,7 +96,7 @@ class AppBackgroundService {
 
     if (service is AndroidServiceInstance) {
       service.on('setAsForeground').listen((event) {
-        service.setAsForegroundService();
+        // service.setAsForegroundService();
       });
 
       service.on('setAsBackground').listen((event) {
@@ -187,17 +189,9 @@ class AppBackgroundService {
     // Start listeners
     setupListeners();
 
-    // Periodic Keep-Alive and UI Update
-    Timer.periodic(const Duration(minutes: 5), (timer) async {
-      if (service is AndroidServiceInstance) {
-        if (await service.isForegroundService()) {
-          final now = DateTime.now();
-          service.setForegroundNotificationInfo(
-            title: "Wedding Dashboard Active",
-            content: "Last checked: ${now.hour}:${now.minute.toString().padLeft(2, '0')}",
-          );
-        }
-      }
+    // Periodic Keep-Alive (Silent)
+    Timer.periodic(const Duration(minutes: 15), (timer) async {
+      debugPrint('Background Service: Keep-alive check at ${DateTime.now()}');
     });
   }
 }

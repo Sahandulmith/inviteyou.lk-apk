@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../services/firebase_service.dart';
 import 'login_screen.dart';
+import 'package:provider/provider.dart';
+import '../theme/theme_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> currentUser;
@@ -86,6 +88,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           const SizedBox(height: 10),
           _buildUserInfoCard(),
+          const SizedBox(height: 24),
+          _buildSectionHeader('Display Settings'),
+          const SizedBox(height: 12),
+          _buildThemeToggle(),
           const SizedBox(height: 24),
           if (isPrimary) ...[
             _buildSectionHeader('Global Invitation Link'),
@@ -189,6 +195,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildThemeToggle() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: SwitchListTile(
+        secondary: Icon(
+          themeProvider.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+          color: themeProvider.isDarkMode ? AppTheme.gold : AppTheme.rosePrimary,
+        ),
+        title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(themeProvider.isDarkMode ? 'Dark theme is active' : 'Light theme is active'),
+        value: themeProvider.isDarkMode,
+        activeColor: AppTheme.gold,
+        onChanged: (val) {
+          themeProvider.toggleTheme(val);
+        },
       ),
     );
   }

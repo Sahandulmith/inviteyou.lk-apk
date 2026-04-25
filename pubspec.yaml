@@ -2,7 +2,7 @@ name: wedding_app
 description: "Wedding Invite Dashboard - Flutter Android App"
 publish_to: 'none'
 
-version: 1.0.8+8
+version: 1.0.9+9
 
 environment:
   sdk: ^3.10.8
@@ -32,6 +32,7 @@ dependencies:
   ota_update: ^7.1.0
   permission_handler: ^12.0.1
   flutter_background_service: ^5.1.0
+  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:

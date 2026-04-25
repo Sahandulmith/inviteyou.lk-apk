@@ -224,7 +224,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.ivory,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: _loading
           ? _buildLoading()
           : Column(
@@ -273,7 +273,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 12, 20),
+          padding: const EdgeInsets.fromLTRB(20, 20, 12, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -348,7 +348,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return NavigationBar(
       selectedIndex: _selectedTab,
       onDestinationSelected: (i) => setState(() => _selectedTab = i),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
       indicatorColor: AppTheme.roseLight.withOpacity(0.4),
       destinations: const [
         NavigationDestination(
@@ -456,7 +456,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   _filteredGuests = _applyChipFilter(_allGuests, f);
                 });
               },
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).cardTheme.color,
               selectedColor: AppTheme.rosePrimary.withOpacity(0.15),
               checkmarkColor: AppTheme.rosePrimary,
               labelStyle: TextStyle(
@@ -761,11 +761,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => Container(
           padding: EdgeInsets.fromLTRB(
-              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 20),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -905,11 +906,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => Container(
           padding: EdgeInsets.fromLTRB(
-              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 20),
+              20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 20),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),

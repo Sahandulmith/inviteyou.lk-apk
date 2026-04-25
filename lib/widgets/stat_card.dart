@@ -29,7 +29,7 @@ class StatCard extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Colors.white,
+              Theme.of(context).cardTheme.color ?? Colors.white,
               color.withOpacity(0.05),
             ],
           ),

@@ -278,7 +278,7 @@ class _SplashScreenState extends State<SplashScreen> {
               builder: (context, snapshot) {
                 if (snapshot.hasData) {
                   return Text(
-                    "Version ${snapshot.data!.version}+${snapshot.data!.buildNumber}",
+                    "v${snapshot.data!.version}",
                     style: const TextStyle(color: Colors.white54, fontSize: 12),
                   );
                 }

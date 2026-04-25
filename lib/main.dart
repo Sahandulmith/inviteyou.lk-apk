@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
@@ -10,8 +11,20 @@ import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
+import 'package:provider/provider.dart';
+import 'theme/theme_provider.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Set system UI style for better edge-to-edge support
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarIconBrightness: Brightness.dark,
+  ));
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   
   // Initialize Firebase
   try {
@@ -28,7 +41,14 @@ void main() async {
   // Initialize background service
   await AppBackgroundService.initialize();
 
-  runApp(const WeddingApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ],
+      child: const WeddingApp(),
+    ),
+  );
 }
 
 class WeddingApp extends StatelessWidget {
@@ -36,10 +56,14 @@ class WeddingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return MaterialApp(
       title: 'Kalana & Chanchala Wedding',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.themeMode,
       home: const SplashScreen(),
     );
   }
