@@ -75,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.rosePrimary,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF0F172A) : AppTheme.rosePrimary,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -119,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardTheme.color,
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
@@ -137,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.textDark,
+                          color: Theme.of(context).textTheme.titleLarge?.color,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -196,7 +196,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 16),
                         Text(
                           _error!,
-                          style: const TextStyle(color: Colors.red, fontSize: 13),
+                          style: TextStyle(color: Colors.red, fontSize: 13),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -231,7 +231,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         }),
                         child: Text(
                           _isSignUp ? 'Already have an account? Login' : 'Don\'t have an account? Sign Up',
-                          style: GoogleFonts.inter(color: AppTheme.rosePrimary),
+                          style: GoogleFonts.inter(color: Theme.of(context).brightness == Brightness.dark ? AppTheme.gold : AppTheme.rosePrimary),
                         ),
                       ),
                     ],

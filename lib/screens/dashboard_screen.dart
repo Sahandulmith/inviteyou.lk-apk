@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import '../theme/app_theme.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/guest_card.dart';
@@ -750,6 +751,37 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  // ──────────────────── CONTACT PICKER ────────────────────
+  Future<void> _pickContact(TextEditingController nameCtrl, TextEditingController waCtrl, Function(void Function()) setS) async {
+    if (await FlutterContacts.requestPermission()) {
+      final contact = await FlutterContacts.openExternalPick();
+      if (contact != null) {
+        // Fetch full contact details as openExternalPick only returns basic info
+        final fullContact = await FlutterContacts.getContact(contact.id);
+        if (fullContact != null && fullContact.phones.isNotEmpty) {
+          setS(() {
+            nameCtrl.text = fullContact.displayName;
+            // Pick the first phone number
+            String phone = fullContact.phones.first.number.replaceAll(RegExp(r'\D'), '');
+            // Simple logic for local numbers (Sri Lanka 94)
+            if (phone.startsWith('0')) {
+              phone = '94${phone.substring(1)}';
+            } else if (!phone.startsWith('94') && phone.length == 9) {
+              phone = '94$phone';
+            }
+            waCtrl.text = phone;
+          });
+        }
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contact permission denied')),
+        );
+      }
+    }
+  }
+
   // ──────────────────── MODALS ────────────────────
 
   void _showAddGuestSheet() {
@@ -768,9 +800,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         builder: (ctx, setS) => Container(
           padding: EdgeInsets.fromLTRB(
               20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 20),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -814,10 +846,15 @@ class _DashboardScreenState extends State<DashboardScreen>
               const SizedBox(height: 12),
               TextField(
                 controller: waCtrl,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'WhatsApp Number',
-                  prefixIcon: Icon(Icons.phone_outlined),
+                  prefixIcon: const Icon(Icons.phone_outlined),
                   hintText: '0712552525 or 94771234567',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.contact_phone_rounded, color: AppTheme.rosePrimary),
+                    onPressed: () => _pickContact(nameCtrl, waCtrl, setS),
+                    tooltip: 'Pick from contacts',
+                  ),
                 ),
                 keyboardType: TextInputType.phone,
               ),
@@ -913,9 +950,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         builder: (ctx, setS) => Container(
           padding: EdgeInsets.fromLTRB(
               20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom + 20),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -959,9 +996,14 @@ class _DashboardScreenState extends State<DashboardScreen>
               const SizedBox(height: 12),
               TextField(
                 controller: waCtrl,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'WhatsApp Number',
-                  prefixIcon: Icon(Icons.phone_outlined),
+                  prefixIcon: const Icon(Icons.phone_outlined),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.contact_phone_rounded, color: AppTheme.rosePrimary),
+                    onPressed: () => _pickContact(nameCtrl, waCtrl, setS),
+                    tooltip: 'Pick from contacts',
+                  ),
                 ),
                 keyboardType: TextInputType.phone,
               ),
@@ -1125,7 +1167,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: Offset(0, 2))
         ],
       ),
       child: Column(
@@ -1137,7 +1179,11 @@ class _DashboardScreenState extends State<DashboardScreen>
               const SizedBox(width: 8),
               Text(
                 'Pending User Approvals (${_pendingUsers.length})',
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 13, 
+                  color: Theme.of(context).textTheme.titleMedium?.color
+                ),
               ),
             ],
           ),

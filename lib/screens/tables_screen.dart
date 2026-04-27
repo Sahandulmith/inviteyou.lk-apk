@@ -240,7 +240,7 @@ class _TablesScreenState extends State<TablesScreen> {
               end: Alignment.bottomRight,
               colors: isFull
                   ? [AppTheme.declined, const Color(0xFFEF9A9A)]
-                  : [AppTheme.rosePrimary, AppTheme.roseLight],
+                  : [Theme.of(context).brightness == Brightness.dark ? AppTheme.gold : AppTheme.rosePrimary, AppTheme.roseLight],
             ),
             borderRadius: BorderRadius.circular(10),
           ),
@@ -300,13 +300,13 @@ class _TablesScreenState extends State<TablesScreen> {
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
                 leading: CircleAvatar(
                   radius: 16,
-                  backgroundColor: AppTheme.rosePrimary.withOpacity(0.15),
+                  backgroundColor: (Theme.of(context).brightness == Brightness.dark ? AppTheme.gold : AppTheme.rosePrimary).withOpacity(0.15),
                   child: Text(
                     g.name[0].toUpperCase(),
-                    style: const TextStyle(
-                        color: AppTheme.rosePrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).brightness == Brightness.dark ? AppTheme.gold : AppTheme.rosePrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13),
                   ),
                 ),
                 title: Text(g.name,

@@ -243,24 +243,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildThemeToggle() {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final bool isEffectiveDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: SwitchListTile(
-        secondary: Icon(
-          themeProvider.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-          color: themeProvider.isDarkMode ? AppTheme.gold : AppTheme.rosePrimary,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  themeProvider.themeMode == ThemeMode.system
+                      ? Icons.brightness_auto_rounded
+                      : (themeProvider.themeMode == ThemeMode.dark
+                          ? Icons.dark_mode_rounded
+                          : Icons.light_mode_rounded),
+                  color: isEffectiveDark ? AppTheme.gold : AppTheme.rosePrimary,
+                ),
+                const SizedBox(width: 12),
+                const Text('App Appearance', style: TextStyle(fontWeight: FontWeight.w600)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: (isEffectiveDark ? AppTheme.gold : AppTheme.rosePrimary).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    themeProvider.themeMode == ThemeMode.system
+                        ? 'System'
+                        : (themeProvider.themeMode == ThemeMode.dark ? 'Dark' : 'Light'),
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: isEffectiveDark ? AppTheme.gold : AppTheme.rosePrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<ThemeMode>(
+                segments: const [
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.system,
+                    label: Text('System'),
+                    icon: Icon(Icons.settings_suggest_rounded, size: 18),
+                  ),
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.light,
+                    label: Text('Light'),
+                    icon: Icon(Icons.light_mode_rounded, size: 18),
+                  ),
+                  ButtonSegment<ThemeMode>(
+                    value: ThemeMode.dark,
+                    label: Text('Dark'),
+                    icon: Icon(Icons.dark_mode_rounded, size: 18),
+                  ),
+                ],
+                selected: {themeProvider.themeMode},
+                onSelectionChanged: (Set<ThemeMode> newSelection) {
+                  themeProvider.setThemeMode(newSelection.first);
+                },
+                showSelectedIcon: false,
+                style: SegmentedButton.styleFrom(
+                  selectedBackgroundColor: isEffectiveDark ? AppTheme.gold : AppTheme.rosePrimary,
+                  selectedForegroundColor: isEffectiveDark ? Colors.black : Colors.white,
+                  side: BorderSide(color: AppTheme.rosePrimary.withOpacity(0.1)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
         ),
-        title: const Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(themeProvider.isDarkMode ? 'Dark theme is active' : 'Light theme is active'),
-        value: themeProvider.isDarkMode,
-        activeColor: AppTheme.gold,
-        onChanged: (val) {
-          themeProvider.toggleTheme(val);
-        },
       ),
     );
   }
+
+
 
   Widget _infoRow(IconData icon, String text) {
     return Padding(
@@ -282,7 +347,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       style: GoogleFonts.playfairDisplay(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-        color: AppTheme.textDark,
+        color: Theme.of(context).textTheme.titleLarge?.color,
       ),
     );
   }

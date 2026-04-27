@@ -123,7 +123,7 @@ class GuestCard extends StatelessWidget {
                             _statusBadge(),
                             if (table != null && table!.id.isNotEmpty) ...[
                               const SizedBox(width: 6),
-                              _tableBadge(),
+                              _tableBadge(context),
                             ],
                             if (guest.clickCount > 0) ...[
                               const SizedBox(width: 6),
@@ -173,7 +173,7 @@ class GuestCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       _actionBtn(
                         icon: Icons.edit_outlined,
-                        color: AppTheme.rosePrimary,
+                        color: Theme.of(context).brightness == Brightness.dark ? AppTheme.gold : AppTheme.rosePrimary,
                         onTap: onEdit,
                         tooltip: 'Edit',
                       ),
@@ -246,7 +246,7 @@ class GuestCard extends StatelessWidget {
     );
   }
 
-  Widget _tableBadge() {
+  Widget _tableBadge(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -255,10 +255,10 @@ class GuestCard extends StatelessWidget {
       ),
       child: Text(
         '🪑 ${table!.name}',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: AppTheme.rosePrimary,
+          color: Theme.of(context).brightness == Brightness.dark ? AppTheme.gold : AppTheme.rosePrimary,
         ),
       ),
     );

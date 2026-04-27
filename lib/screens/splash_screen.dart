@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
+import '../theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -106,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        title: Text("Update Available", style: GoogleFonts.inter(color: const Color(0xFF003366), fontWeight: FontWeight.bold)),
+        title: Text("Update Available", style: GoogleFonts.inter(color: Theme.of(context).brightness == Brightness.dark ? AppTheme.gold : const Color(0xFF003366), fontWeight: FontWeight.bold)),
         content: Text("A new version ($version) is available. Would you like to update now?", style: GoogleFonts.inter()),
         actions: [
           TextButton(
@@ -115,7 +116,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF003366),
+              backgroundColor: Theme.of(context).brightness == Brightness.dark ? AppTheme.gold : const Color(0xFF003366),
+              foregroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () {
