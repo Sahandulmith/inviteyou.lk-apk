@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
@@ -15,28 +16,44 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   String _status = "Initializing...";
   double _progress = 0;
   bool _isUpdating = false;
+  late AnimationController _heartController;
+  late Animation<double> _heartAnimation;
 
   @override
   void initState() {
     super.initState();
+    _heartController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    
+    _heartAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _heartController, curve: Curves.easeInOut),
+    );
+
     _initializeApp();
   }
 
+  @override
+  void dispose() {
+    _heartController.dispose();
+    super.dispose();
+  }
+
   Future<void> _initializeApp() async {
+    final stopwatch = Stopwatch()..start();
+    
     try {
-      // 1. Get current version
       PackageInfo packageInfo = await PackageInfo.fromPlatform();
       int currentBuildNumber = int.parse(packageInfo.buildNumber);
       String currentVersion = packageInfo.version;
 
       setState(() => _status = "Checking for updates...");
 
-      // 2. Fetch latest version from Firestore
-      // Assume collection 'app_config' and document 'versioning'
       var doc = await FirebaseFirestore.instance
           .collection('app_config')
           .doc('versioning')
@@ -48,8 +65,6 @@ class _SplashScreenState extends State<SplashScreen> {
         String latestVersion = data?['latest_version']?.toString() ?? "1.0.0";
         String downloadUrl = data?['download_url']?.toString() ?? "";
 
-        // Check if build number is higher OR if version string is different
-        // (Best practice is to always increment build number, but this is safer)
         bool hasUpdate = latestBuildNumber > currentBuildNumber || 
                         _isVersionNewer(latestVersion, currentVersion);
 
@@ -61,6 +76,12 @@ class _SplashScreenState extends State<SplashScreen> {
     } catch (e) {
       debugPrint("Update check failed: $e");
     }
+
+    final elapsed = stopwatch.elapsedMilliseconds;
+    if (elapsed < 3500) {
+      await Future.delayed(Duration(milliseconds: 3500 - elapsed));
+    }
+    
     _proceedToApp();
   }
 
@@ -75,7 +96,7 @@ class _SplashScreenState extends State<SplashScreen> {
       }
       return latestParts.length > currentParts.length;
     } catch (e) {
-      return latest != current; // Fallback to simple inequality
+      return latest != current;
     }
   }
 
@@ -84,20 +105,24 @@ class _SplashScreenState extends State<SplashScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text("Update Available", style: TextStyle(color: Color(0xFF003366), fontWeight: FontWeight.bold)),
-        content: Text("A new version ($version) is available. Would you like to update now?"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        title: Text("Update Available", style: GoogleFonts.inter(color: const Color(0xFF003366), fontWeight: FontWeight.bold)),
+        content: Text("A new version ($version) is available. Would you like to update now?", style: GoogleFonts.inter()),
         actions: [
           TextButton(
             onPressed: () => _proceedToApp(),
-            child: const Text("Later", style: TextStyle(color: Colors.grey)),
+            child: Text("Later", style: GoogleFonts.inter(color: Colors.grey)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF003366)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF003366),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             onPressed: () {
               Navigator.pop(context);
               _startUpdate(url);
             },
-            child: const Text("Update Now"),
+            child: Text("Update Now", style: GoogleFonts.inter()),
           ),
         ],
       ),
@@ -111,7 +136,6 @@ class _SplashScreenState extends State<SplashScreen> {
     });
 
     try {
-      // 1. Explicitly check for Install Permission (Android 13 requirement)
       if (await Permission.requestInstallPackages.request().isDenied) {
         _showError("You must allow 'Install Unknown Apps' in Settings to update.");
         return;
@@ -119,7 +143,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
       _status = "Connecting to server...";
 
-      // 2. Execute update without a custom filename (safer)
       OtaUpdate().execute(url).listen(
         (OtaEvent event) {
           setState(() {
@@ -131,36 +154,18 @@ class _SplashScreenState extends State<SplashScreen> {
               case OtaStatus.INSTALLING:
                 _status = "Installing...";
                 _progress = 1.0;
-                // Give the user 2 seconds to read the message before the installer takes over
-                Future.delayed(const Duration(seconds: 2), () {
-                  // The installer will now close the app
-                });
-                break;
-              case OtaStatus.ALREADY_RUNNING_ERROR:
-                _status = "Update already running";
-                break;
-              case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
-                _showError("Permission Denied: Go to Settings > Apps > Special Access > Install Unknown Apps and enable it for this app.");
-                break;
-              case OtaStatus.DOWNLOAD_ERROR:
-                _showError("Download Failed: Check your internet or GitHub link.");
-                break;
-              case OtaStatus.INTERNAL_ERROR:
-                _showError("Internal Error: Try again later.");
                 break;
               default:
-                _status = "Processing: ${event.status}";
+                _status = "Processing...";
                 break;
             }
           });
         },
         onError: (e) {
-          debugPrint('OTA Update Error: $e');
           _showError("Update Step Error: $e");
         },
       );
     } catch (e) {
-      debugPrint('Failed to start update: $e');
       _showError("Critical Error: $e");
     }
   }
@@ -169,12 +174,12 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
     setState(() {
       _isUpdating = false;
-      _status = message; // Show the error plainly as the status
+      _status = message;
     });
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(message, style: GoogleFonts.inter()),
         backgroundColor: Colors.red,
         action: SnackBarAction(
           label: "CONTINUE",
@@ -205,10 +210,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (context) => currentUser != null 
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => currentUser != null 
             ? DashboardScreen(currentUser: currentUser!) 
             : const LoginScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 1000),
       ),
     );
   }
@@ -216,76 +225,110 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF003366), // Sapphire Blue
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo or Icon
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFFFD700), width: 2), // Gold
-              ),
-              child: const Icon(
-                Icons.favorite,
-                color: Color(0xFFFFD700), // Gold
-                size: 80,
-              ),
-            ),
-            const SizedBox(height: 30),
-            // const Text(
-            //   "Kalana & Chanchala",
-            //   style: TextStyle(
-            //     color: Color(0xFFFFD700),
-            //     fontSize: 24,
-            //     fontWeight: FontWeight.bold,
-            //     letterSpacing: 2,
-            //   ),
-            // ),
-            const Text(
-              "Wedding Invitation",
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-                letterSpacing: 1.2,
-              ),
-            ),
-            const SizedBox(height: 50),
-            if (_isUpdating)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Column(
-                  children: [
-                    LinearProgressIndicator(
-                      value: _progress,
-                      backgroundColor: Colors.white24,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF003366),
+              Color(0xFF001F3F),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ScaleTransition(
+                scale: _heartAnimation,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFFD700).withOpacity(0.2),
+                        blurRadius: 30,
+                        spreadRadius: 10,
+                      ),
+                    ],
+                    border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.4), width: 1.5),
+                  ),
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.favorite,
+                      color: Color(0xFFFFD700),
+                      size: 100,
                     ),
-                    const SizedBox(height: 10),
-                  ],
+                  ),
                 ),
               ),
-            Text(
-              _status,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-            ),
-            const SizedBox(height: 20),
-            // Current version display
-            FutureBuilder<PackageInfo>(
-              future: PackageInfo.fromPlatform(),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return Text(
-                    "v${snapshot.data!.version}",
-                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                  );
-                }
-                return const SizedBox();
-              },
-            ),
-          ],
+              const SizedBox(height: 50),
+              Text(
+                "InviteYou.lk",
+                style: GoogleFonts.greatVibes(
+                  color: const Color(0xFFFFD700),
+                  fontSize: 42,
+                  letterSpacing: 2,
+                ),
+              ),
+              Text(
+                "MANAGEMENT APP",
+                style: GoogleFonts.inter(
+                  color: Colors.white60,
+                  fontSize: 12,
+                  letterSpacing: 5,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              const SizedBox(height: 70),
+              if (_isUpdating)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 60),
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: _progress,
+                          minHeight: 4,
+                          backgroundColor: Colors.white10,
+                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              Text(
+                _status.toUpperCase(),
+                style: GoogleFonts.inter(
+                  color: Colors.white, 
+                  fontSize: 11, 
+                  letterSpacing: 3,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 40),
+              FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return Text(
+                      "VERSION ${snapshot.data!.version}",
+                      style: GoogleFonts.inter(color: Colors.white24, fontSize: 10, letterSpacing: 2),
+                    );
+                  }
+                  return const SizedBox();
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

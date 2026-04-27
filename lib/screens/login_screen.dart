@@ -89,15 +89,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: AppTheme.gold.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.favorite,
-                    color: AppTheme.gold,
-                    size: 48,
+                  child: Image.asset(
+                    'assets/images/logo.png',
+                    width: 120,
+                    height: 120,
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Kalana & Chanchala',
+                  'InviteYou.lk',
                   style: GoogleFonts.playfairDisplay(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -107,7 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Wedding Dashboard',
+                  'MANAGEMENT APP',
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     color: AppTheme.champagne,
