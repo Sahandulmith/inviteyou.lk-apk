@@ -59,10 +59,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     bool isFirstGuestsLoad = true;
     _guestsSub = _firebase.guestsStream().listen((guests) {
-      if (!isFirstGuestsLoad) {
-        _detectNewRsvps(guests);
-        _detectNewGuestAdditions(guests);
-      }
       if (mounted) {
         setState(() {
           _allGuests = guests;
@@ -79,12 +75,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
 
     _pendingSub = _firebase.pendingUsersStream().listen((users) {
-      if (!_pendingInitialized) {
-        _prevPendingUsers = List.from(users);
-        _pendingInitialized = true;
-      } else {
-        _detectNewUserRequests(users);
-      }
       setState(() {
         _pendingUsers = users;
       });
@@ -103,74 +93,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   }
 
-  void _detectNewRsvps(List<GuestModel> newGuests) {
-    for (final guest in newGuests) {
-      final prev = _prevGuests.firstWhere(
-        (g) => g.id == guest.id,
-        orElse: () => GuestModel(
-          id: '',
-          name: '',
-          whatsapp: '',
-          numberOfGuests: 0,
-          side: '',
-          status: 'Invited',
-          invitationStatus: '',
-          clickCount: 0,
-          invitationSent: false,
-          rsvpGuests: 0,
-        ),
-      );
-
-      final wasNotRsvpd = prev.status == 'Invited' || prev.id.isEmpty;
-      final isNowRsvpd = guest.status == 'Attending' || guest.status == 'Declined';
-
-      if (wasNotRsvpd && isNowRsvpd) {
-        _notifications.showRsvpNotification(
-          guestName: guest.displayName,
-          status: guest.status,
-          message: guest.rsvpMessage,
-        );
-      }
-    }
-  }
-
-  void _detectNewGuestAdditions(List<GuestModel> newGuests) {
-    if (_loading || _prevGuests.isEmpty) return;
-
-    // ONLY notify the primary users (1st registered Groom/Bride)
-    if (widget.currentUser['isPrimary'] != true) return;
-
-    for (final guest in newGuests) {
-      final bool isNew = _prevGuests.every((g) => g.id != guest.id);
-      
-      if (isNew) {
-        // Only notify if someone else added it
-        if (guest.addedByEmail != widget.currentUser['email']) {
-          _notifications.showNewGuestNotification(
-            guestName: guest.displayName,
-            side: guest.side,
-            addedByEmail: guest.addedByEmail ?? 'User',
-            addedByRole: guest.addedByRole ?? 'Admin',
-          );
-        }
-      }
-    }
-  }
-
-  void _detectNewUserRequests(List<Map<String, dynamic>> newPending) {
-    for (final user in newPending) {
-      // Check if this user was already in our previous list
-      final isNew = _prevPendingUsers.every((u) => u['id'] != user['id']);
-      
-      if (isNew) {
-        debugPrint('NOTIFYING: New user request from ${user['email']}');
-        _notifications.showNewUserRequestNotification(
-          email: user['email'] ?? 'New User',
-          role: user['role'] ?? 'User',
-        );
-      }
-    }
-  }
 
   List<GuestModel> _applyFilter(List<GuestModel> guests) {
     final q = _searchCtrl.text.toLowerCase();
