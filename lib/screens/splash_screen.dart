@@ -58,7 +58,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       var doc = await FirebaseFirestore.instance
           .collection('app_config')
           .doc('versioning')
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 5));
 
       if (doc.exists) {
         final data = doc.data();

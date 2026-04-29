@@ -1,23 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.wedding_dashboard">
+
     <!-- Notification permission for Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-    <!-- Internet for Firebase -->
+    <!-- Internet for Firebase / FCM -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Vibration for notifications -->
     <uses-permission android:name="android.permission.VIBRATE"/>
-    <!-- Wake lock for background notifications -->
+    <!-- Boot receiver for scheduled notifications -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-    
-    <!-- Permissions for In-App Updates -->
+    <!-- In-App Update / OTA permissions -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Contacts picker -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
@@ -25,6 +21,7 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:enableOnBackInvokedCallback="true">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -35,18 +32,19 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
             <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
 
-        <!-- Flutter Local Notifications receiver -->
-        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
-        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+        <!-- Flutter Local Notifications receivers -->
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
@@ -59,7 +57,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
-        <!-- Notification Icon Settings -->
+        <!-- FCM default notification settings -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@mipmap/ic_launcher" />
@@ -68,17 +66,7 @@
             android:resource="@color/notification_icon_color" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="push_channel" />
-
-        <!-- Background Service - Isolated in a separate process for maximum persistence -->
-        <service
-            android:name="id.flutter.flutter_background_service.BackgroundService"
-            android:foregroundServiceType="dataSync"
-            android:process=":background_sync"
-            android:stopWithTask="false"
-            android:enabled="true"
-            android:exported="true"
-            tools:replace="android:exported,android:process" />
+            android:value="rsvp_channel" />
 
         <!-- FileProvider for OTA Updates -->
         <provider
@@ -97,7 +85,6 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
-        <!-- WhatsApp query -->
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
     </queries>

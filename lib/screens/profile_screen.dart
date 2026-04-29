@@ -8,8 +8,7 @@ import 'login_screen.dart';
 import 'package:provider/provider.dart';
 import '../theme/theme_provider.dart';
 
-import 'package:flutter_background_service/flutter_background_service.dart';
-import '../services/background_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic> currentUser;
@@ -94,7 +93,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 24),
           _buildSectionHeader('Notification Settings'),
           const SizedBox(height: 12),
-          _buildBackgroundSyncToggle(),
+          _buildFcmStatusCard(),
           const SizedBox(height: 24),
           _buildSectionHeader('Display Settings'),
           const SizedBox(height: 12),
@@ -206,35 +205,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildBackgroundSyncToggle() {
-    return FutureBuilder<bool>(
-      future: FlutterBackgroundService().isRunning(),
+  Widget _buildFcmStatusCard() {
+    return FutureBuilder<NotificationSettings>(
+      future: FirebaseMessaging.instance.getNotificationSettings(),
       builder: (context, snapshot) {
-        final bool isRunning = snapshot.data ?? false;
+        final status = snapshot.data?.authorizationStatus;
+        final bool granted = status == AuthorizationStatus.authorized ||
+            status == AuthorizationStatus.provisional;
+
         return Card(
           elevation: 2,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: SwitchListTile(
-            secondary: Icon(
-              Icons.sync_rounded,
-              color: isRunning ? AppTheme.attending : AppTheme.textMid,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: (granted ? AppTheme.attending : AppTheme.declined)
+                        .withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    granted
+                        ? Icons.notifications_active_rounded
+                        : Icons.notifications_off_rounded,
+                    color: granted ? AppTheme.attending : AppTheme.declined,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Push Notifications (FCM)',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        granted
+                            ? 'Active — alerts arrive even when app is closed'
+                            : 'Disabled — enable in device Settings',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: granted
+                              ? AppTheme.attending
+                              : AppTheme.declined,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  granted ? Icons.check_circle_rounded : Icons.warning_rounded,
+                  color: granted ? AppTheme.attending : AppTheme.declined,
+                  size: 20,
+                ),
+              ],
             ),
-            title: const Text('Real-time Background Sync', style: TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(isRunning 
-              ? 'Receiving updates when app is closed' 
-              : 'Updates only when app is open'),
-            value: isRunning,
-            activeColor: AppTheme.attending,
-            onChanged: (val) async {
-              final service = FlutterBackgroundService();
-              if (val) {
-                await AppBackgroundService.initialize();
-                await service.startService();
-              } else {
-                service.invoke('stopService');
-              }
-              setState(() {}); // Refresh UI
-            },
           ),
         );
       },
