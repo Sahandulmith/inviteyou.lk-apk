@@ -648,24 +648,38 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ──────────────────── CONTACT PICKER ────────────────────
   Future<void> _pickContact(TextEditingController nameCtrl, TextEditingController waCtrl, Function(void Function()) setS) async {
-    if (await FlutterContacts.requestPermission()) {
-      final contact = await FlutterContacts.openExternalPick();
-      if (contact != null) {
-        // Fetch full contact details as openExternalPick only returns basic info
-        final fullContact = await FlutterContacts.getContact(contact.id);
-        if (fullContact != null && fullContact.phones.isNotEmpty) {
-          setS(() {
-            nameCtrl.text = fullContact.displayName;
-            // Pick the first phone number
-            String phone = fullContact.phones.first.number.replaceAll(RegExp(r'\D'), '');
-            // Simple logic for local numbers (Sri Lanka 94)
-            if (phone.startsWith('0')) {
-              phone = '94${phone.substring(1)}';
-            } else if (!phone.startsWith('94') && phone.length == 9) {
-              phone = '94$phone';
-            }
-            waCtrl.text = phone;
-          });
+    bool isGranted = await Permission.contacts.isGranted;
+    if (!isGranted) {
+      final status = await Permission.contacts.request();
+      isGranted = status.isGranted;
+    }
+
+    if (isGranted) {
+      try {
+        final contact = await FlutterContacts.openExternalPick();
+        if (contact != null) {
+          // Fetch full contact details as openExternalPick only returns basic info
+          final fullContact = await FlutterContacts.getContact(contact.id);
+          if (fullContact != null && fullContact.phones.isNotEmpty) {
+            setS(() {
+              nameCtrl.text = fullContact.displayName;
+              // Pick the first phone number
+              String phone = fullContact.phones.first.number.replaceAll(RegExp(r'\D'), '');
+              // Simple logic for local numbers (Sri Lanka 94)
+              if (phone.startsWith('0')) {
+                phone = '94${phone.substring(1)}';
+              } else if (!phone.startsWith('94') && phone.length == 9) {
+                phone = '94$phone';
+              }
+              waCtrl.text = phone;
+            });
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error picking contact: $e')),
+          );
         }
       }
     } else {
@@ -746,7 +760,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   prefixIcon: const Icon(Icons.phone_outlined),
                   hintText: '0712552525 or 94771234567',
                   suffixIcon: IconButton(
-                    icon: const Icon(Icons.contact_phone_rounded, color: AppTheme.rosePrimary),
+                    icon: Icon(Icons.contact_phone_rounded, color: Theme.of(context).colorScheme.primary),
                     onPressed: () => _pickContact(nameCtrl, waCtrl, setS),
                     tooltip: 'Pick from contacts',
                   ),
