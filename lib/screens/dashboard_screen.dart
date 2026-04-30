@@ -648,44 +648,64 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // ──────────────────── CONTACT PICKER ────────────────────
   Future<void> _pickContact(TextEditingController nameCtrl, TextEditingController waCtrl, Function(void Function()) setS) async {
-    bool isGranted = await Permission.contacts.isGranted;
-    if (!isGranted) {
-      final status = await Permission.contacts.request();
-      isGranted = status.isGranted;
-    }
+    try {
+      // Request permission using both permission_handler and the plugin's readonly request.
+      // readonly: true is used to avoid issues with WRITE_CONTACTS permission on some devices.
+      bool isGranted = await Permission.contacts.isGranted;
+      if (!isGranted) {
+        isGranted = (await Permission.contacts.request()).isGranted;
+      }
+      
+      // Secondary check via plugin's own request
+      if (!isGranted) {
+        isGranted = await FlutterContacts.requestPermission(readonly: true);
+      }
 
-    if (isGranted) {
-      try {
+      if (isGranted) {
+        // openExternalPick() launches the native contact picker
         final contact = await FlutterContacts.openExternalPick();
+        
         if (contact != null) {
-          // Fetch full contact details as openExternalPick only returns basic info
-          final fullContact = await FlutterContacts.getContact(contact.id);
-          if (fullContact != null && fullContact.phones.isNotEmpty) {
+          // Double check we have the details, if not fetch them
+          final fullContact = (contact.phones.isEmpty) 
+              ? await FlutterContacts.getContact(contact.id) 
+              : contact;
+
+          if (fullContact != null) {
             setS(() {
-              nameCtrl.text = fullContact.displayName;
-              // Pick the first phone number
-              String phone = fullContact.phones.first.number.replaceAll(RegExp(r'\D'), '');
-              // Simple logic for local numbers (Sri Lanka 94)
-              if (phone.startsWith('0')) {
-                phone = '94${phone.substring(1)}';
-              } else if (!phone.startsWith('94') && phone.length == 9) {
-                phone = '94$phone';
+              // Update name and phone from the picked contact
+              if (fullContact.displayName.isNotEmpty) {
+                nameCtrl.text = fullContact.displayName;
               }
-              waCtrl.text = phone;
+              
+              if (fullContact.phones.isNotEmpty) {
+                // Pick the first phone number
+                String phone = fullContact.phones.first.number.replaceAll(RegExp(r'\D'), '');
+                
+                // Simple logic for local numbers (Sri Lanka 94)
+                if (phone.startsWith('0')) {
+                  phone = '94${phone.substring(1)}';
+                } else if (phone.length == 9 && !phone.startsWith('94')) {
+                  phone = '94$phone';
+                }
+                
+                waCtrl.text = phone;
+              }
             });
           }
         }
-      } catch (e) {
+      } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error picking contact: $e')),
+            const SnackBar(content: Text('Contact permission denied')),
           );
         }
       }
-    } else {
+    } catch (e) {
+      debugPrint('Error picking contact: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contact permission denied')),
+          SnackBar(content: Text('Error picking contact: $e')),
         );
       }
     }

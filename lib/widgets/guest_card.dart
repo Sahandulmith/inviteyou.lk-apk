@@ -99,23 +99,25 @@ class GuestCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(Icons.phone_outlined,
-                                size: 12, color: AppTheme.textMid),
-                            const SizedBox(width: 4),
-                            Text(guest.whatsapp,
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              Icon(Icons.phone_outlined,
+                                  size: 12, color: AppTheme.textMid),
+                              const SizedBox(width: 4),
+                              Text(guest.whatsapp,
+                                  style: Theme.of(context).textTheme.bodyMedium),
+                              const SizedBox(width: 8),
+                              Icon(Icons.group_outlined,
+                                  size: 12, color: AppTheme.textMid),
+                              const SizedBox(width: 2),
+                              Text(
+                                '${guest.rsvpGuests}/${guest.numberOfGuests}',
                                 style: Theme.of(context).textTheme.bodyMedium,
-                                overflow: TextOverflow.ellipsis),
-                            const SizedBox(width: 8),
-                            Icon(Icons.group_outlined,
-                                size: 12, color: AppTheme.textMid),
-                            const SizedBox(width: 2),
-                            Text(
-                              '${guest.rsvpGuests}/${guest.numberOfGuests}',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Row(

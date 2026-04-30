@@ -259,7 +259,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.4), width: 1.5),
                   ),
                   child: Image.asset(
-                    'assets/images/logo.png',
+                    'assets/images/app_icon.png',
                     width: 120,
                     height: 120,
                     fit: BoxFit.contain,

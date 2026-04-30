@@ -90,7 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     shape: BoxShape.circle,
                   ),
                   child: Image.asset(
-                    'assets/images/logo.png',
+                    'assets/images/app_icon.png',
                     width: 120,
                     height: 120,
                     fit: BoxFit.contain,

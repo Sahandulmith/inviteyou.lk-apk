@@ -57,7 +57,7 @@ class GuestModel {
       title: data['title'] ?? 'Mr',
       name: data['name'] ?? '',
       shortId: data['shortId'],
-      whatsapp: data['whatsapp'] ?? '',
+      whatsapp: (data['whatsapp'] ?? '').toString(),
       numberOfGuests: (data['numberOfGuests'] ?? 1) is int
           ? data['numberOfGuests'] ?? 1
           : int.tryParse(data['numberOfGuests'].toString()) ?? 1,
