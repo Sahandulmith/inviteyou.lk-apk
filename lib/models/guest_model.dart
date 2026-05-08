@@ -45,6 +45,7 @@ class GuestModel {
   String get displayName {
     if (title.isEmpty) return name;
     if (title == 'Mr & Family') return 'Mr $name & Family';
+    if (title == 'Ms & Family') return 'Ms $name & Family';
     return '$title $name';
   }
 

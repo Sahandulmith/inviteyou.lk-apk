@@ -238,4 +238,102 @@ class FirebaseService {
       'updatedAt': DateTime.now().toIso8601String(),
     }, SetOptions(merge: true));
   }
+
+  // ──────────────────── MESSAGE TEMPLATES ────────────────────
+  /// Fetches a message template by type and role
+  Future<String> getMessageTemplate(String templateType, String role) async {
+    try {
+      final doc = await _db.collection('messageTemplates').doc(templateType).get();
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null && data.containsKey(role)) {
+          return data[role]['content'] ?? '';
+        }
+      }
+      return '';
+    } catch (e) {
+      print('Error fetching message template: $e');
+      return '';
+    }
+  }
+
+  /// Get template as a stream for real-time updates
+  Stream<String> messageTemplateStream(String templateType, String role) {
+    return _db
+        .collection('messageTemplates')
+        .doc(templateType)
+        .snapshots()
+        .map((doc) {
+          if (doc.exists) {
+            final data = doc.data();
+            if (data != null && data.containsKey(role)) {
+              return data[role]['content'] ?? '';
+            }
+          }
+          return '';
+        });
+  }
+
+  /// Get all message templates for a specific role
+  Future<Map<String, Map<String, dynamic>>> getAllMessageTemplates(String role) async {
+    try {
+      final snapshot = await _db.collection('messageTemplates').get();
+      final templates = <String, Map<String, dynamic>>{};
+      for (var doc in snapshot.docs) {
+        if (doc.data().containsKey(role)) {
+          templates[doc.id] = {
+            'title': doc.data()['title'] ?? '',
+            'description': doc.data()['description'] ?? '',
+            'content': doc.data()[role]['content'] ?? '',
+            'updatedAt': doc.data()[role]['updatedAt'] ?? '',
+          };
+        }
+      }
+      return templates;
+    } catch (e) {
+      print('Error fetching all message templates: $e');
+      return {};
+    }
+  }
+
+  /// Save message template for a specific role
+  Future<void> saveMessageTemplate(String templateType, String role, String content) async {
+    try {
+      final doc = _db.collection('messageTemplates').doc(templateType);
+      await doc.set({
+        role: {
+          'content': content,
+          'updatedAt': DateTime.now().toIso8601String(),
+        }
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('Error saving message template: $e');
+      rethrow;
+    }
+  }
+
+  /// Replace template variables with actual guest data
+  String personalizeTemplate(
+    String template, {
+    required String guestName,
+    required String guestTitle,
+    required int guestCount,
+    required String invitationLink,
+  }) {
+    String displayName = guestName;
+    if (guestTitle.isNotEmpty) {
+      if (guestTitle == "Mr & Family") {
+        displayName = "Mr $guestName & Family";
+      } else if (guestTitle == "Ms & Family") {
+        displayName = "Ms $guestName & Family";
+      } else {
+        displayName = "$guestTitle $guestName";
+      }
+    }
+
+    return template
+        .replaceAll('{GUEST_NAME}', displayName)
+        .replaceAll('{GUEST_COUNT}', guestCount.toString())
+        .replaceAll('{INVITATION_LINK}', invitationLink);
+  }
 }

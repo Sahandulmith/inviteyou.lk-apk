@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
@@ -98,6 +99,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildSectionHeader('Display Settings'),
           const SizedBox(height: 12),
           _buildThemeToggle(),
+          const SizedBox(height: 24),
+          _buildSectionHeader('Message Templates'),
+          const SizedBox(height: 12),
+          _buildMessageTemplatesEditor(),
           const SizedBox(height: 24),
           if (isPrimary) ...[
             _buildSectionHeader('Global Invitation Link'),
@@ -310,7 +315,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ? 'System'
                         : (themeProvider.themeMode == ThemeMode.dark ? 'Dark' : 'Light'),
                     style: GoogleFonts.inter(
-                      fontSize: 11,
+                      fontSize: 10,
                       color: isEffectiveDark ? AppTheme.gold : AppTheme.rosePrimary,
                       fontWeight: FontWeight.bold,
                     ),
@@ -326,21 +331,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ButtonSegment<ThemeMode>(
                     value: ThemeMode.system,
                     label: Text('System'),
-                    icon: Icon(Icons.settings_suggest_rounded, size: 18),
                   ),
                   ButtonSegment<ThemeMode>(
                     value: ThemeMode.light,
                     label: Text('Light'),
-                    icon: Icon(Icons.light_mode_rounded, size: 18),
+                    icon: Icon(Icons.light_mode_rounded, size: 16),
                   ),
                   ButtonSegment<ThemeMode>(
                     value: ThemeMode.dark,
                     label: Text('Dark'),
-                    icon: Icon(Icons.dark_mode_rounded, size: 18),
+                    icon: Icon(Icons.dark_mode_rounded, size: 16),
                   ),
                 ],
                 selected: {themeProvider.themeMode},
                 onSelectionChanged: (Set<ThemeMode> newSelection) {
+                  // Update the selected theme mode through the provider
                   themeProvider.setThemeMode(newSelection.first);
                 },
                 showSelectedIcon: false,
@@ -349,6 +354,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   selectedForegroundColor: isEffectiveDark ? Colors.black : Colors.white,
                   side: BorderSide(color: AppTheme.rosePrimary.withOpacity(0.1)),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 ),
               ),
             ),
@@ -449,6 +455,403 @@ class _ProfileScreenState extends State<ProfileScreen> {
       icon: const Icon(Icons.logout_rounded),
       label: const Text('Logout Session', style: TextStyle(fontWeight: FontWeight.bold)),
       onPressed: _logout,
+    );
+  }
+
+  Widget _buildMessageTemplatesEditor() {
+    final userRole = widget.currentUser['role'] ?? 'Groom';
+    
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.mail_outline, color: AppTheme.rosePrimary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Edit Messages for $userRole',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Manage invitation, reminder, and thank you messages',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.edit),
+              label: const Text('Edit Templates'),
+              onPressed: () => _showMessageTemplateDialog(userRole),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.rosePrimary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 44),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMessageTemplateDialog(String userRole) {
+    showDialog(
+      context: context,
+      builder: (ctx) => MessageTemplateDialog(
+        role: userRole,
+        firebase: _firebase,
+      ),
+    );
+  }
+}
+
+// Formatter to protect variables from being edited
+class VariableProtectionFormatter extends TextInputFormatter {
+  final Set<String> protectedVariables = {
+    '{GUEST_NAME}',
+    '{INVITATION_LINK}'
+  };
+
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    // Check if any protected variable was removed or corrupted
+    for (String variable in protectedVariables) {
+      if (oldValue.text.contains(variable) &&
+          !newValue.text.contains(variable)) {
+        // Variable was removed, reject the change
+        return oldValue;
+      }
+    }
+    // Allow the change
+    return newValue;
+  }
+}
+
+class MessageTemplateDialog extends StatefulWidget {
+  final String role;
+  final FirebaseService firebase;
+
+  const MessageTemplateDialog({
+    super.key,
+    required this.role,
+    required this.firebase,
+  });
+
+  @override
+  State<MessageTemplateDialog> createState() => _MessageTemplateDialogState();
+}
+
+class _MessageTemplateDialogState extends State<MessageTemplateDialog>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  late Map<String, TextEditingController> _controllers;
+  late Map<String, String> _otherUserTemplates; // Templates from Groom/Bride
+  final List<String> _templateTypes = ['invitation', 'reminder', 'thankyou'];
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _controllers = {
+      'invitation': TextEditingController(),
+      'reminder': TextEditingController(),
+      'thankyou': TextEditingController(),
+    };
+    _otherUserTemplates = {
+      'invitation': '',
+      'reminder': '',
+      'thankyou': '',
+    };
+    _loadTemplates();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _loadTemplates() async {
+    setState(() => _loading = true);
+    try {
+      final defaultTemplates = {
+        'invitation': '''Dear {GUEST_NAME},
+
+You're invited to the wedding of
+
+💍 Chanchala & Kalana 💍
+
+Sunday, July 12, 2026
+
+👇 View Invitation:
+{INVITATION_LINK}''',
+        'reminder': '''Hi {GUEST_NAME}! 📣
+
+This is a friendly reminder about the wedding invitation.
+
+💍 Chanchala & Kalana's Wedding 💍
+
+Date: Sunday, July 12, 2026
+
+👉 Click here to RSVP:
+{INVITATION_LINK}''',
+        'thankyou': '''Hi {GUEST_NAME},
+
+Thank you so much for celebrating with us! 💕
+
+We appreciate you joining us for our special day.
+
+See you soon!
+
+💍 Chanchala & Kalana 💍'''
+      };
+
+      // Determine other user role
+      final otherRole = widget.role == 'Groom' ? 'Bride' : 'Groom';
+
+      for (String type in _templateTypes) {
+        // Load current user's template
+        final content = await widget.firebase.getMessageTemplate(type, widget.role);
+        if (mounted) {
+          _controllers[type]?.text =
+              content.isEmpty ? defaultTemplates[type] ?? '' : content;
+        }
+
+        // Load other user's template
+        final otherContent =
+            await widget.firebase.getMessageTemplate(type, otherRole);
+        if (mounted) {
+          _otherUserTemplates[type] =
+              otherContent.isEmpty ? defaultTemplates[type] ?? '' : otherContent;
+        }
+      }
+    } catch (e) {
+      print('Error loading templates: $e');
+      // Set default templates if error
+      _controllers['invitation']?.text = '''Dear {GUEST_NAME},
+
+You're invited to the wedding of
+
+💍 Chanchala & Kalana 💍
+
+Sunday, July 12, 2026
+
+👇 View Invitation:
+{INVITATION_LINK}''';
+      _controllers['reminder']?.text = '''Hi {GUEST_NAME}! 📣
+
+This is a friendly reminder about the wedding invitation.
+
+💍 Chanchala & Kalana's Wedding 💍
+
+Date: Sunday, July 12, 2026
+
+👉 Click here to RSVP:
+{INVITATION_LINK}''';
+      _controllers['thankyou']?.text = '''Hi {GUEST_NAME},
+
+Thank you so much for celebrating with us! 💕
+
+We appreciate you joining us for our special day.
+
+See you soon!
+
+💍 Chanchala & Kalana 💍''';
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _saveTemplate(String templateType) async {
+    final content = _controllers[templateType]?.text ?? '';
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Message cannot be empty')),
+      );
+      return;
+    }
+
+    setState(() => _loading = true);
+    try {
+      await widget.firebase.saveMessageTemplate(templateType, widget.role, content);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('✓ $templateType template saved for ${widget.role}!')),
+        );
+        // Auto-close dialog after 1 second
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving template: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.rosePrimary.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${widget.role} Messages',
+                      style: GoogleFonts.playfairDisplay(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          TabBar(
+            controller: _tabController,
+            labelColor: AppTheme.rosePrimary,
+            unselectedLabelColor: Colors.grey,
+            tabs: const [
+              Tab(text: '📧 Invitation'),
+              Tab(text: '🔔 Reminder'),
+              Tab(text: '🙏 Thank You'),
+            ],
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : TabBarView(
+                    controller: _tabController,
+                    children: _templateTypes.map((type) {
+                      return _buildTemplateTab(type);
+                    }).toList(),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTemplateTab(String templateType) {
+    final otherRole = widget.role == 'Groom' ? 'Bride' : 'Groom';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Your template section
+          Text(
+            'Your ${widget.role}\'s Message:',
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.rosePrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppTheme.rosePrimary.withOpacity(0.5)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: TextField(
+              controller: _controllers[templateType],
+              maxLines: 10,
+              inputFormatters: [VariableProtectionFormatter()],
+              decoration: InputDecoration(
+                hintText: 'Edit your $templateType message...\n\n'
+                    'Variables cannot be deleted:\n'
+                    '{GUEST_NAME}, {INVITATION_LINK}',
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.all(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${_controllers[templateType]?.text.length ?? 0} characters',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.save),
+                label: const Text('Save'),
+                onPressed: () => _saveTemplate(templateType),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.attending,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          // Other user's template section
+          Text(
+            '$otherRole\'s Message:',
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.grey[100],
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              _otherUserTemplates[templateType] ?? 'No template set',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

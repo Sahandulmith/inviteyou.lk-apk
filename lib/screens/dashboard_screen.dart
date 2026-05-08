@@ -758,7 +758,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   labelText: 'Title',
                   prefixIcon: Icon(Icons.badge_outlined),
                 ),
-                items: ['Mr', 'Ms', 'Miss', 'Mr & Ms', 'Mr & Family']
+                items: ['Mr', 'Ms', 'Mr & Ms', 'Mr & Family ', 'Ms & Family']
                     .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
                 onChanged: (v) => setS(() => title = v!),
@@ -908,7 +908,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   labelText: 'Title',
                   prefixIcon: Icon(Icons.badge_outlined),
                 ),
-                items: ['Mr', 'Ms', 'Miss', 'Mr & Ms', 'Mr & Family']
+                items: ['Mr', 'Ms', 'Mr & Ms', 'Mr & Family' , 'Ms & Family']
                     .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
                 onChanged: (v) => setS(() => title = v!),
@@ -1036,31 +1036,62 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _sendWhatsApp(GuestModel guest) async {
-    final String shortId = guest.shortId ?? '';
-    final String urlId = shortId.isNotEmpty ? '&id=$shortId' : '';
-    final String link = "${_baseUrl}invitation?name=${Uri.encodeComponent(guest.name)}$urlId";
-    final String msg =
-"Dear ${guest.displayName},\n\nYou're invited to the wedding of\n\n💍 Chanchala & Kalana 💍\n\nNumber of Guests: ${guest.numberOfGuests}\nSunday, July 12, 2026\n\n👇 View Invitation:\n$link";
-    
-    final Uri url = Uri.parse('https://wa.me/${guest.whatsapp}?text=${Uri.encodeComponent(msg)}');
-    
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-      await _firebase.markInvitationSent(guest.id);
-    } else {
+    try {
+      // Load the saved template from Firebase for current user's role
+      final String userRole = widget.currentUser['role'] ?? 'Groom';
+      String template = await _firebase.getMessageTemplate('invitation', userRole);
+      
+      // If template is empty, use default
+      if (template.isEmpty) {
+        template = '''Dear {GUEST_NAME},
+
+You're invited to the wedding of
+
+💍 Chanchala & Kalana 💍
+
+Sunday, July 12, 2026
+
+👇 View Invitation:
+{INVITATION_LINK}''';
+      }
+      
+      // Replace variables with actual guest data
+      String msg = template;
+      msg = msg.replaceAll('{GUEST_NAME}', guest.displayName);
+      
+      // Generate invitation link
+      final String shortId = guest.shortId ?? '';
+      final String urlId = shortId.isNotEmpty ? '&id=$shortId' : '';
+      final String link = "${_baseUrl}invitation?name=${Uri.encodeComponent(guest.name)}$urlId";
+      msg = msg.replaceAll('{INVITATION_LINK}', link);
+      
+      final Uri url = Uri.parse('https://wa.me/${guest.whatsapp}?text=${Uri.encodeComponent(msg)}');
+      
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+        await _firebase.markInvitationSent(guest.id);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not launch WhatsApp')),
+          );
+        }
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not launch WhatsApp')),
+          SnackBar(
+            content: Text('WhatsApp opened for ${guest.name}'),
+            backgroundColor: AppTheme.attending,
+          ),
         );
       }
-    }
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('WhatsApp opened for ${guest.name}'),
-          backgroundColor: AppTheme.attending,
-        ),
-      );
+    } catch (e) {
+      print('Error sending WhatsApp: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
     }
   }
 
